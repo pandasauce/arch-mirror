@@ -1,0 +1,13 @@
+0.00	|	0
+87.99	|	6864
+
+;For ATTESA E-TS 0.3157 rad tire (R32)
+
+;Only modify if you know what you're doing
+;Even then think about it, many aftermarket are a straight line
+
+;Front wheel rotational speed (V WF)
+;Rear wheel rotational speed (V WR)
+;DeltaVW = VWR - VWF - DeltaVH
+
+;7kg-m/km/h

@@ -1,0 +1,28 @@
+-1.00	|	0.16
+-0.90	|	0.21
+-0.80	|	0.28
+-0.70	|	0.37
+-0.60	|	0.47
+-0.50	|	0.59
+-0.40	|	0.75
+-0.30	|	1.00
+0.00	|	1.00
+0.30	|	1.00
+0.40	|	0.75
+0.50	|	0.59
+0.60	|	0.47
+0.70	|	0.37
+0.80	|	0.28
+0.90	|	0.21
+1.00	|	0.16
+
+;For ATTESA E-TS (R32, R32 V-spec, R33, R34)
+;Only modify if you know what you're doing
+
+;If you make an aftermarket map, use Pro as a guide
+;Generally aftermarket controllers are smoother and
+;modulate the G signal for more AWD in the corners 
+;compared to the standard map 
+;Might not be so different from OEM Pro
+
+;Make a new file for it
