@@ -5,9 +5,9 @@
 --normalized sigmoid function for new_throttle function by JPG_18
 
 -- [THROTTLE_LUA]
--- THROTTLE_GAMMA=1.0 ; Defaults to 1.0 if not specified.
--- THROTTLE_SLOPE=1.5 ; Defaults to 1.5 if not specified.
--- IDLE_RPM=1000 ; Defaults to 1000 if not specified.
+-- THROTTLE_GAMMA=1.1 ; Defaults to 1.1 if not specified.
+-- THROTTLE_SLOPE=2.5 ; Defaults to 2.5 if not specified.
+-- IDLE_RPM=950 ; Defaults to 1000 if not specified.
 -- THROTTLE_TYPE=0 ; 0=Cable Throttle, 1=Drive by Wire. Defaults to 0 if not specified.
 ---------------------------------------------------------------------------------------------------
 
@@ -29,8 +29,8 @@ local WOT_TORQUE = ac.DataLUT11.carData(0, power_lut)
 -----------------------------------------
 
 -- Custom parameters --
-local gamma = engine_ini:get("THROTTLE_LUA", "THROTTLE_GAMMA", 1.0) -- Throttle gamma
-local slope = engine_ini:get("THROTTLE_LUA", "THROTTLE_SLOPE", 1.5) -- Torque mode
+local gamma = engine_ini:get("THROTTLE_LUA", "THROTTLE_GAMMA", 1.1) -- Throttle gamma
+local slope = engine_ini:get("THROTTLE_LUA", "THROTTLE_SLOPE", 2.5) -- Torque mode
 local throttle_type = engine_ini:get("THROTTLE_LUA", "THROTTLE_TYPE", 0) -- Throttle type (0 = cable, 1 = dbw)
 local new_idle = engine_ini:get("THROTTLE_LUA", "IDLE_RPM", idle_RPM) -- New idle RPM
 -------------------------------------------------
@@ -54,15 +54,13 @@ local function _idleModelSetup()
     isIdleInitialized = true
 end
 
-local function calculateIdleTorque(rpm) 
-	if data.rpm > 0 then
-		return math.saturate(math.min(idle_throttle_ref * new_idle / rpm, idle_throttle_ref * (1 + idle_throttle_ref)))
-	else
-		return idle_throttle_ref * (1 + idle_throttle_ref)
-	end
+local function calculateIdleTorque(rpm)
+    return math.saturate(math.min(idle_throttle_ref * new_idle / rpm, idle_throttle_ref * 1.25))
 end
 
 local function calculateTorque(throttle, rpm)
+    -- 0.1 is the deadzone
+    throttle = math.abs(car.gas - throttle) > 0.1 and car.gas or throttle
     local new_throttle = ((2/(1+(math.exp(-((redline/rpm)^gamma)*slope*throttle)))-1))/((2/(1+(math.exp(-((redline/rpm)^gamma)*slope*1)))-1))
     return new_throttle
 end
@@ -84,10 +82,4 @@ function script.update(dt)
     end
 
     ac.overrideGasInput(final_throttle)
-
-    -- ac.debug("input t: ", data.gas)
-    -- ac.debug("idle throttle should be in use: ", modelled_throttle < idle_model_throttle)
-    -- ac.debug("idle throttle: ", idle_model_throttle)
-    -- ac.debug("output t: ", final_throttle)
-    -- ac.debug("rpm: ", data.rpm)
 end
