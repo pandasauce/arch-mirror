@@ -1,8 +1,5 @@
--- Developed by SwitchPro and Ustahl --
--- Switch Throttle Model © 2024 by SwitchPro and Ustahl is licensed under CC BY-NC-ND 4.0. --
--- To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-nd/4.0/--
 
---normalized sigmoid function for new_throttle function by JPG_18
+--normalized sigmoid function for new_throttle function by JPG_18, some of script by SwitchPro and Ustahl
 
 -- [THROTTLE_LUA]
 -- THROTTLE_GAMMA=1.1 ; Defaults to 1.1 if not specified.
@@ -31,55 +28,74 @@ local WOT_TORQUE = ac.DataLUT11.carData(0, power_lut)
 -- Custom parameters --
 local gamma = engine_ini:get("THROTTLE_LUA", "THROTTLE_GAMMA", 1.1) -- Throttle gamma
 local slope = engine_ini:get("THROTTLE_LUA", "THROTTLE_SLOPE", 2.5) -- Torque mode
-local throttle_type = engine_ini:get("THROTTLE_LUA", "THROTTLE_TYPE", 0) -- Throttle type (0 = cable, 1 = dbw)
+local idle_type = engine_ini:get("THROTTLE_LUA", "IDLE_TYPE", engine_ini:get("THROTTLE_LUA", "THROTTLE_TYPE", 0)) -- Idle type (0 = cable, 1 = dbw)
 local new_idle = engine_ini:get("THROTTLE_LUA", "IDLE_RPM", idle_RPM) -- New idle RPM
 -------------------------------------------------
 
 -- Variables or something --
+local enableScript = true
 local isIdleInitialized = false
-local coast_torque
-local idle_torque
-local idle_throttle_ref
 local idle_model_throttle
+local idle_model_trqReq
 
 local modelled_throttle
-
-local final_throttle
 ----------------------
 
-local function _idleModelSetup()
-    coast_torque = -(coast_torque_ref/(coast_RPM - idle_RPM)) * (new_idle - idle_RPM)
-    idle_torque = WOT_TORQUE:get(new_idle)
-    idle_throttle_ref = (0 - coast_torque)/(idle_torque - coast_torque)
-    isIdleInitialized = true
-end
+local function calculateTorque(throttle, rpm) -- calculates the throttle request per driver throttle and rpm
+    local new_throttle=1.0;
+    if(rpm>0) then
+        new_throttle = ((2/(1+(math.exp(-((redline/rpm)^gamma)*slope*throttle)))-1))/((2/(1+(math.exp(-((redline/rpm)^gamma)*slope*1)))-1))
+    end
 
-local function calculateIdleTorque(rpm)
-    return math.saturate(math.min(idle_throttle_ref * new_idle / rpm, idle_throttle_ref * 1.25))
-end
-
-local function calculateTorque(throttle, rpm)
-    -- 0.1 is the deadzone
-    throttle = math.abs(car.gas - throttle) > 0.1 and car.gas or throttle
-    local new_throttle = ((2/(1+(math.exp(-((redline/rpm)^gamma)*slope*throttle)))-1))/((2/(1+(math.exp(-((redline/rpm)^gamma)*slope*1)))-1))
     return new_throttle
 end
 
+local function atanh(x) --helper fxn
+    return 0.5 * math.log((1.0 + x) / (1.0 - x));
+end
+
+local function calculateTorqueInv(trqReq, rpm) --calculates the inverse of the throttle model
+    if(trqReq and rpm) then
+    local firstTerm = 2.0/(slope*(redline/rpm)^gamma)
+    local secondTerm = atanh(trqReq*math.tanh((slope*(redline/rpm)^gamma)/2.0))
+    return firstTerm*secondTerm
+    else
+        return 0.0
+    end
+end
+
+local function calculateIdleThrottle(new_idle_RPM) --calculates the torque request for idle
+  local brkTrq = -(new_idle_RPM-idle_RPM)*(coast_torque_ref/(coast_RPM-idle_RPM))
+  local engTrq = WOT_TORQUE:get(new_idle_RPM)
+  return brkTrq/(brkTrq-engTrq)
+end
+
+local function _idleModelSetup()
+    idle_model_throttle = calculateIdleThrottle(new_idle)
+    idle_model_trqReq = calculateTorqueInv(idle_model_throttle,new_idle);
+    isIdleInitialized = true
+end
+
 function script.update(dt)
+    if(enableScript) then
     if not isIdleInitialized then _idleModelSetup() end
 
-    idle_model_throttle = calculateIdleTorque(data.rpm)
-    modelled_throttle = calculateTorque(data.gas, data.rpm)
+    local usedGas = data.gas*(1.0-idle_model_trqReq) + idle_model_trqReq;
 
-    if modelled_throttle > idle_model_throttle then
-        final_throttle = modelled_throttle
-    else
-        if throttle_type == 1 then
-            final_throttle = data.rpm > new_idle and 0 or idle_model_throttle
-        else
-            final_throttle = idle_model_throttle
-        end
+    if idle_type == 1 then
+        usedGas = math.max(data.gas,idle_model_trqReq);
     end
+	
+	usedGas = math.abs(car.gas - usedGas) > 0.1 and car.gas or usedGas
+    modelled_throttle = calculateTorque(usedGas, data.rpm)
 
-    ac.overrideGasInput(final_throttle)
+    --ac.log("Idle Throttle Req",idle_model_throttle);
+    --ac.log("Idle Throttle Gas",idle_model_trqReq);
+    --ac.log("Used Gas",usedGas);
+    --ac.log("Modeled Throttle",modelled_throttle);
+   
+    ac.overrideGasInput(modelled_throttle)
+
+    end
+    
 end
