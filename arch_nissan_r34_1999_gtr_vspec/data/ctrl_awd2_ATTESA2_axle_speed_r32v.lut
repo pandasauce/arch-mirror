@@ -1,5 +1,6 @@
 0.00	|	0
-84.59	|	6864
+2.00	|	0
+8.04	|	490
 
 ;For ATTESA E-TS 0.3284 rad tire (R32 V-spec)
 
@@ -11,3 +12,4 @@
 ;DeltaVW = VWR - VWF - DeltaVH
 
 ;7kg-m/km/h
+;50kg-m, 7.14km/h max
