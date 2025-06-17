@@ -1,7 +1,8 @@
 0.00	|	0
-78.27	|	6864
+2.00	|	0
+7.59	|	490
 
-;For ATTESA E-TS 0.354875 (0.3560 / 0.35375) rad tire (R35)
+;For ATTESA E-TS (0.3560+0.3538) / 2, 0.3549 rad tire (R35)
 
 ;Only modify if you know what you're doing
 ;Even then think about it, many aftermarket are a straight line
@@ -11,3 +12,4 @@
 ;DeltaVW = VWR - VWF - DeltaVH
 
 ;7kg-m/km/h
+;50kg-m, 7.14km/h max
